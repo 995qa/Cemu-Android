@@ -4,6 +4,11 @@
 #include "Cafe/Filesystem/FST/FST.h"
 #include "pugixml.hpp"
 #include "Common/FileStream.h"
+
+#if __ANDROID__
+#include "Common/unix/ContentUriStream.h"
+#endif // __ANDROID__
+
 #include <zarchive/zarchivereader.h>
 #include "util/IniParser/IniParser.h"
 #include "util/crypto/crc32.h"
@@ -180,7 +185,7 @@ bool TitleInfo::ParseWuaTitleFolderName(std::string_view name, TitleId& titleIdO
 bool TitleInfo::DetectFormat(const fs::path& path, fs::path& pathOut, TitleDataFormat& formatOut)
 {
 	std::error_code ec;
-	if (path.has_extension() && fs::is_regular_file(path, ec))
+	if (path.has_extension() && cemu::fs::is_file(path, ec))
 	{
 		std::string filenameStr = _pathToUtf8(path.filename());
 		if (boost::iends_with(filenameStr, ".rpx"))
@@ -192,7 +197,7 @@ bool TitleInfo::DetectFormat(const fs::path& path, fs::path& pathOut, TitleDataF
 				parentPath = parentPath.parent_path();
 				// next to content and meta?
 				std::error_code ec;
-				if (fs::exists(parentPath / "content", ec) && fs::exists(parentPath / "meta", ec))
+				if (cemu::fs::exists(parentPath / "content", ec) && cemu::fs::exists(parentPath / "meta", ec))
 				{
 					formatOut = TitleDataFormat::HOST_FS;
 					pathOut = parentPath;
@@ -220,7 +225,13 @@ bool TitleInfo::DetectFormat(const fs::path& path, fs::path& pathOut, TitleDataF
 			pathOut = path;
 			// a Wii U archive file can contain multiple titles but TitleInfo only maps to one
 			// we use the first base title that we find. This is the most intuitive behavior when someone launches "game.wua"
-			ZArchiveReader* zar = ZArchiveReader::OpenFromFile(path);
+			ZArchiveReader* zar = nullptr;
+#if __ANDROID__
+			if(FilesystemAndroid::isContentUri(path))
+				zar = ZArchiveReader::OpenFromStream(std::make_unique<ContentUriStream>(path));
+			else
+#endif // __ANDROID__
+				zar = ZArchiveReader::OpenFromFile(path);
 			if (!zar)
 				return false;
 			ZArchiveNodeHandle rootDir = zar->LookUp("", false, true);
@@ -275,7 +286,7 @@ bool TitleInfo::DetectFormat(const fs::path& path, fs::path& pathOut, TitleDataF
 	{
 		// does it point to the root folder of a title?
 		std::error_code ec;
-		if (fs::exists(path / "content", ec) && fs::exists(path / "meta", ec) && fs::exists(path / "code", ec))
+		if (cemu::fs::exists(path / "content", ec) && cemu::fs::exists(path / "meta", ec) && cemu::fs::exists(path / "code", ec))
 		{
 			formatOut = TitleDataFormat::HOST_FS;
 			pathOut = path;
@@ -355,7 +366,13 @@ ZArchiveReader* _ZArchivePool_AcquireInstance(const fs::path& path)
 	}
 	_lock.unlock();
 	// opening wua files can be expensive, so we do it outside of the lock
-	ZArchiveReader* zar = ZArchiveReader::OpenFromFile(path);
+	ZArchiveReader* zar = nullptr;
+#if __ANDROID__
+	if(FilesystemAndroid::isContentUri(path))
+		zar = ZArchiveReader::OpenFromStream(std::make_unique<ContentUriStream>(path));
+	else
+#endif // __ANDROID__
+		zar = ZArchiveReader::OpenFromFile(path);
 	if (!zar)
 		return nullptr;
 	_lock.lock();
@@ -397,7 +414,7 @@ bool TitleInfo::Mount(std::string_view virtualPath, std::string_view subfolder, 
 	{
 		fs::path hostFSPath = m_fullPath;
 		hostFSPath.append(subfolder);
-		bool r = FSCDeviceHostFS_Mount(std::string(virtualPath).c_str(), _pathToUtf8(hostFSPath), mountPriority);
+		bool r = FSCDeviceHost_Mount(std::string(virtualPath).c_str(), _pathToUtf8(hostFSPath), mountPriority);
 		cemu_assert_debug(r);
 		if (!r)
 		{

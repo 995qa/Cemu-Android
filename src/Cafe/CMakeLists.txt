@@ -67,24 +67,23 @@ add_library(CemuCafe
   HW/Espresso/Recompiler/PPCFunctionBoundaryTracker.h
   HW/Espresso/Recompiler/PPCRecompiler.cpp
   HW/Espresso/Recompiler/PPCRecompiler.h
-  HW/Espresso/Recompiler/PPCRecompilerImlAnalyzer.cpp
+  HW/Espresso/Recompiler/RecompilerTests.cpp
+  HW/Espresso/Recompiler/IML/IML.h
+  HW/Espresso/Recompiler/IML/IMLSegment.cpp
+  HW/Espresso/Recompiler/IML/IMLSegment.h
+  HW/Espresso/Recompiler/IML/IMLInstruction.cpp
+  HW/Espresso/Recompiler/IML/IMLInstruction.h
+  HW/Espresso/Recompiler/IML/IMLDebug.cpp
+  HW/Espresso/Recompiler/IML/IMLAnalyzer.cpp
+  HW/Espresso/Recompiler/IML/IMLOptimizer.cpp
+  HW/Espresso/Recompiler/IML/IMLRegisterAllocator.cpp
+  HW/Espresso/Recompiler/IML/IMLRegisterAllocator.h
+  HW/Espresso/Recompiler/IML/IMLRegisterAllocatorRanges.cpp
+  HW/Espresso/Recompiler/IML/IMLRegisterAllocatorRanges.h
   HW/Espresso/Recompiler/PPCRecompilerImlGen.cpp
   HW/Espresso/Recompiler/PPCRecompilerImlGenFPU.cpp
   HW/Espresso/Recompiler/PPCRecompilerIml.h
-  HW/Espresso/Recompiler/PPCRecompilerImlOptimizer.cpp
-  HW/Espresso/Recompiler/PPCRecompilerImlRanges.cpp
-  HW/Espresso/Recompiler/PPCRecompilerImlRanges.h
-  HW/Espresso/Recompiler/PPCRecompilerImlRegisterAllocator2.cpp
-  HW/Espresso/Recompiler/PPCRecompilerImlRegisterAllocator.cpp
   HW/Espresso/Recompiler/PPCRecompilerIntermediate.cpp
-  HW/Espresso/Recompiler/PPCRecompilerX64AVX.cpp
-  HW/Espresso/Recompiler/PPCRecompilerX64BMI.cpp
-  HW/Espresso/Recompiler/PPCRecompilerX64.cpp
-  HW/Espresso/Recompiler/PPCRecompilerX64FPU.cpp
-  HW/Espresso/Recompiler/PPCRecompilerX64Gen.cpp
-  HW/Espresso/Recompiler/PPCRecompilerX64GenFPU.cpp
-  HW/Espresso/Recompiler/PPCRecompilerX64.h
-  HW/Espresso/Recompiler/x64Emit.hpp
   HW/Latte/Common/RegisterSerializer.cpp
   HW/Latte/Common/RegisterSerializer.h
   HW/Latte/Common/ShaderSerializer.cpp
@@ -522,8 +521,34 @@ add_library(CemuCafe
   TitleList/TitleList.h
 )
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+  target_sources(CemuCafe PRIVATE
+    HW/Espresso/Recompiler/BackendX64/BackendX64AVX.cpp
+    HW/Espresso/Recompiler/BackendX64/BackendX64BMI.cpp
+    HW/Espresso/Recompiler/BackendX64/BackendX64.cpp
+    HW/Espresso/Recompiler/BackendX64/BackendX64FPU.cpp
+    HW/Espresso/Recompiler/BackendX64/BackendX64Gen.cpp
+    HW/Espresso/Recompiler/BackendX64/BackendX64GenFPU.cpp
+    HW/Espresso/Recompiler/BackendX64/BackendX64.h
+    HW/Espresso/Recompiler/BackendX64/X64Emit.hpp
+    HW/Espresso/Recompiler/BackendX64/x86Emitter.h
+  )
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64)|(AARCH64)")
+  target_sources(CemuCafe PRIVATE
+    HW/Espresso/Recompiler/BackendAArch64/BackendAArch64.cpp
+    HW/Espresso/Recompiler/BackendAArch64/BackendAArch64.h
+  )
+endif()
+
 if(APPLE)
 	target_sources(CemuCafe PRIVATE "HW/Latte/Renderer/Vulkan/CocoaSurface.mm")
+endif()
+
+if(ANDROID)
+  target_sources(CemuCafe PRIVATE
+    Filesystem/fscDeviceAndroidSAF.cpp
+    Filesystem/fscDeviceAndroidSAF.h
+  )
 endif()
 
 set_property(TARGET CemuCafe PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -542,7 +567,6 @@ target_link_libraries(CemuCafe PRIVATE
 	CemuCommon
 	CemuComponents
 	CemuConfig
-	CemuGui
 	CemuInput
 	CemuResource
 	CemuUtil
@@ -579,8 +603,8 @@ else ()
   target_link_libraries(CemuCafe PRIVATE libusb::libusb)
 endif ()
 
-if (ENABLE_WXWIDGETS)
-	target_link_libraries(CemuCafe PRIVATE wx::base wx::core)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64)|(AARCH64)")
+  target_link_libraries(CemuCafe PRIVATE xbyak_aarch64)
 endif()
 
 if(WIN32)

@@ -45,6 +45,7 @@ enum class LogType : sint32
 
 	PRUDP = 40,
 
+	Recompiler = 60,
 	NFC	= 41,
 	NTAG = 42,
 };
@@ -122,6 +123,16 @@ bool cemuLog_logDebug(LogType type, TFmt format, TArgs&&... args)
 	return false;
 #endif
 }
+
+class LogCallbacks
+{
+public:
+	virtual void Log(std::string_view filter, std::string_view message) = 0;
+	virtual void Log(std::string_view filter, std::wstring_view message) = 0;
+};
+
+void cemuLog_registerLogCallbacks(LogCallbacks* logCallbacks);
+void cemuLog_unregisterLogCallbacks();
 
 #define cemuLog_logDebugOnce(...) { static bool _not_first_call = false; if (!_not_first_call) { _not_first_call = true; cemuLog_logDebug(__VA_ARGS__); } }
 

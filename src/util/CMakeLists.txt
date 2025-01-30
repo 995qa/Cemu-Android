@@ -75,7 +75,11 @@ if(WIN32)
 	target_sources(CemuUtil PRIVATE MemMapper/MemMapperWin.cpp)
 	target_sources(CemuUtil PRIVATE SystemInfo/SystemInfoWin.cpp)
 elseif(UNIX)
-	target_sources(CemuUtil PRIVATE Fiber/FiberUnix.cpp)
+  if(ANDROID)
+    target_sources(CemuUtil PRIVATE Fiber/FiberBoost.cpp)
+  else()
+	  target_sources(CemuUtil PRIVATE Fiber/FiberUnix.cpp)
+  endif()
 	target_sources(CemuUtil PRIVATE MemMapper/MemMapperUnix.cpp)
 	target_sources(CemuUtil PRIVATE SystemInfo/SystemInfoUnix.cpp)
 	if(NOT APPLE)
@@ -91,6 +95,10 @@ set_property(TARGET CemuUtil PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CON
 
 target_include_directories(CemuUtil PUBLIC "../")
 
+if(ANDROID)
+  target_link_libraries(CemuUtil PRIVATE Boost::context)
+endif()
+
 target_link_libraries(CemuUtil PRIVATE
 	CemuCommon
 	CemuConfig
@@ -98,7 +106,3 @@ target_link_libraries(CemuUtil PRIVATE
 	Boost::nowide
 	OpenSSL::Crypto
 )
-
-if (ENABLE_WXWIDGETS)
-	target_link_libraries(CemuUtil PRIVATE wx::base wx::core)
-endif()

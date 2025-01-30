@@ -74,7 +74,6 @@
 #include <type_traits>
 #include <optional>
 #include <span>
-#include <ranges>
 
 #include <boost/predef.h>
 #include <boost/nowide/convert.hpp>
@@ -84,6 +83,64 @@
 #include <glm/gtc/quaternion.hpp>
 
 namespace fs = std::filesystem;
+#if __ANDROID__
+#include "Common/unix/FilesystemAndroid.h"
+#endif // __ANDROID
+
+namespace cemu
+{
+namespace fs
+{
+inline bool is_directory(const std::filesystem::path& p)
+{
+#if __ANDROID__
+    if (FilesystemAndroid::isContentUri(p))
+        return FilesystemAndroid::isDirectory(p);
+#endif  // __ANDROID__
+    return std::filesystem::is_directory(p);
+}
+inline bool is_directory(const std::filesystem::path& p, std::error_code& ec)
+{
+#if __ANDROID__
+    if (FilesystemAndroid::isContentUri(p))
+        return FilesystemAndroid::isDirectory(p);
+#endif  // __ANDROID__
+    return std::filesystem::is_directory(p, ec);
+}
+inline bool is_file(const std::filesystem::path& p)
+{
+#if __ANDROID__
+    if (FilesystemAndroid::isContentUri(p))
+        return FilesystemAndroid::isFile(p);
+#endif  // __ANDROID__
+    return std::filesystem::is_regular_file(p);
+}
+inline bool is_file(const std::filesystem::path& p, std::error_code& ec)
+{
+#if __ANDROID__
+    if (FilesystemAndroid::isContentUri(p))
+        return FilesystemAndroid::isFile(p);
+#endif  // __ANDROID__
+    return std::filesystem::is_regular_file(p, ec);
+}
+inline bool exists(const std::filesystem::path& p)
+{
+#if __ANDROID__
+    if (FilesystemAndroid::isContentUri(p))
+        return FilesystemAndroid::exists(p);
+#endif  // __ANDROID__
+    return std::filesystem::exists(p);
+}
+inline bool exists(const std::filesystem::path& p, std::error_code& ec)
+{
+#if __ANDROID__
+    if (FilesystemAndroid::isContentUri(p))
+        return FilesystemAndroid::exists(p);
+#endif  // __ANDROID__
+    return std::filesystem::exists(p, ec);
+}
+}  // namespace fs
+}  // namespace cemu);
 
 #include "enumFlags.h"
 
@@ -296,22 +353,7 @@ FORCE_INLINE int BSF(uint32 v) // returns index of first bit set, counting from 
 // On aarch64 we handle some of the x86 intrinsics by implementing them as wrappers
 #if defined(__aarch64__)
 
-inline void _mm_pause()
-{
-    asm volatile("yield");
-}
-
-inline uint64 __rdtsc()
-{
-    uint64 t;
-    asm volatile("mrs %0, cntvct_el0" : "=r" (t));
-    return t;
-}
-
-inline void _mm_mfence()
-{
-    
-}
+#include "sse2neon.h";
 
 inline unsigned char _addcarry_u64(unsigned char carry, unsigned long long a, unsigned long long b, unsigned long long *result)
 {
@@ -474,16 +516,24 @@ inline std::string_view _utf8Wrapper(std::u8string_view input)
 // convert fs::path to utf8 encoded string
 inline std::string _pathToUtf8(const fs::path& path)
 {
+#if __ANDROID__
+    return path.generic_string();
+#else
     std::u8string strU8 = path.generic_u8string();
     std::string v((const char*)strU8.data(), strU8.size());
     return v;
+#endif // __ANDROID__
 }
 
 // convert utf8 encoded string to fs::path
 inline fs::path _utf8ToPath(std::string_view input)
 {
+#if __ANDROID__
+    return fs::path(input);
+#else
     std::basic_string_view<char8_t> v((char8_t*)input.data(), input.size());
     return fs::path(v);
+#endif // __ANDROID__
 }
 
 // locale-independent variant of tolower() which also matches Wii U behavior
@@ -526,7 +576,7 @@ std::atomic<T>* _rawPtrToAtomic(T* ptr)
     return reinterpret_cast<std::atomic<T>*>(ptr);
 }
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && defined(ARCH_X86_64)
 #define ATTR_MS_ABI __attribute__((ms_abi))
 #else
 #define ATTR_MS_ABI

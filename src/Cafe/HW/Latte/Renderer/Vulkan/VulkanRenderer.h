@@ -12,6 +12,7 @@
 #include "util/helpers/Semaphore.h"
 #include "util/containers/flat_hash_map.hpp"
 #include "util/containers/robin_hood.h"
+#include "Cemu/GuiSystem/GuiSystem.h"
 
 struct VkSupportedFormatInfo_t
 {
@@ -20,6 +21,11 @@ struct VkSupportedFormatInfo_t
 	bool fmt_r5g6b5_unorm_pack{};
 	bool fmt_r4g4b4a4_unorm_pack{};
 	bool fmt_a1r5g5b5_unorm_pack{};
+	bool fmt_bc1{};
+	bool fmt_bc2{};
+	bool fmt_bc3{};
+	bool fmt_bc4{};
+	bool fmt_bc5{};
 };
 
 struct VkDescriptorSetInfo
@@ -197,14 +203,18 @@ public:
 	static VkSurfaceKHR CreateWinSurface(VkInstance instance, HWND hwindow);
 #endif
 #if BOOST_OS_LINUX
+#if __ANDROID__
+	static VkSurfaceKHR CreateAndroidSurface(VkInstance instance, ANativeWindow* window);
+#else
 	static VkSurfaceKHR CreateXlibSurface(VkInstance instance, Display* dpy, Window window);
     static VkSurfaceKHR CreateXcbSurface(VkInstance instance, xcb_connection_t* connection, xcb_window_t window);
-	#ifdef HAS_WAYLAND
+#ifdef HAS_WAYLAND
 	static VkSurfaceKHR CreateWaylandSurface(VkInstance instance, wl_display* display, wl_surface* surface);
-	#endif
-#endif
+#endif // HAS_WAYLAND
+#endif // __ANDROID__
+#endif // BOOST_OS_LINUX
 
-	static VkSurfaceKHR CreateFramebufferSurface(VkInstance instance, struct WindowHandleInfo& windowInfo);
+	static VkSurfaceKHR CreateFramebufferSurface(VkInstance instance, GuiSystem::WindowHandleInfo& windowInfo);
 
 	void AppendOverlayDebugInfo() override;
 
@@ -440,6 +450,7 @@ private:
 			bool tooling_info = false; // VK_EXT_tooling_info
 			bool transform_feedback = false;
 			bool depth_range_unrestricted = false;
+			bool depth_clip_enable = false;
 			bool nv_fill_rectangle = false; // NV_fill_rectangle
 			bool pipeline_feedback = false;
 			bool pipeline_creation_cache_control = false; // VK_EXT_pipeline_creation_cache_control
@@ -453,6 +464,16 @@ private:
 			bool shader_float_controls = false; // VK_KHR_shader_float_controls
 			bool present_wait = false; // VK_KHR_present_wait
 		}deviceExtensions;
+
+		struct
+		{
+			bool geometry_shader;
+			bool logic_op;
+			bool sampler_anisotropy;
+			bool occlusion_query_precise;
+			bool depth_clamp;
+			bool vertex_pipeline_stores_and_atomics;
+		} deviceFeatures;
 
 		struct
 		{

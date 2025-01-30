@@ -1,5 +1,5 @@
-#include "gui/wxgui.h"
-#include "gui/debugger/DisasmCtrl.h"
+#include "wxgui.h"
+#include "debugger/DisasmCtrl.h"
 
 #include "Cafe/OS/RPL/rpl_structs.h"
 #include "Cafe/OS/RPL/rpl.h"
@@ -7,9 +7,8 @@
 #include "Cafe/OS/RPL/rpl_debug_symbols.h"
 #include "Cemu/PPCAssembler/ppcAssembler.h"
 #include "Cafe/HW/Espresso/Debugger/Debugger.h"
-#include "gui/debugger/DebuggerWindow2.h"
+#include "debugger/DebuggerWindow2.h"
 #include "util/helpers/helpers.h"
-#include "gui/guiWrapper.h"
 
 #include "Cemu/ExpressionParser/ExpressionParser.h"
 #include "Cafe/HW/Espresso/Debugger/DebugSymbolStorage.h"
@@ -828,6 +827,7 @@ void DisasmCtrl::GoToAddressDialog()
 			wxCommandEvent evt(wxEVT_DISASMCTRL_NOTIFY_GOTO_ADDRESS);
 			evt.SetExtraLong(static_cast<long>(result));
 			wxPostEvent(GetParent(), evt);
+			debugger_getDebuggerCallbacks()->updateViewThreadsafe();
 		}
 		else
 		{

@@ -1,5 +1,4 @@
 #include "Cafe/OS/common/OSCommon.h"
-#include "gui/wxgui.h"
 #include "Cafe/OS/libs/gx2/GX2.h"
 #include "Cafe/GameProfile/GameProfile.h"
 #include "Cafe/HW/Espresso/Interpreter/PPCInterpreterInternal.h"
@@ -64,9 +63,6 @@
 
 // HW interfaces
 #include "Cafe/HW/SI/si.h"
-
-// dependency to be removed
-#include "gui/guiWrapper.h"
 
 #include <time.h>
 
@@ -172,7 +168,7 @@ void LoadMainExecutable()
 		applicationRPX = RPLLoader_LoadFromMemory(rpxData, rpxSize, (char*)_pathToExecutable.c_str());
 		if (!applicationRPX)
 		{
-			wxMessageBox(_("Failed to run this title because the executable is damaged"));
+			cemuLog_log(LogType::Force, "Failed to run this title because the executable is damaged");
 			cemuLog_createLogFile(false);
 			cemuLog_waitForFlush();
 			exit(0);
@@ -357,7 +353,9 @@ uint32 LoadSharedData()
 
 void cemu_initForGame()
 {
-	gui_updateWindowTitles(false, true, 0.0);
+	auto cafeSystemCallbacks = CafeSystem::getCafeSystemCallbacks();
+	if (cafeSystemCallbacks)
+		cafeSystemCallbacks->updateWindowTitles(false, true, 0.0);
 	// input manager apply game profile
 	InputManager::instance().apply_game_profile();
 	// log info for launched title
@@ -427,6 +425,20 @@ void cemu_initForGame()
 
 namespace CafeSystem
 {
+	CafeSystemCallbacks* sCafeSystemCallbacks = nullptr;
+	void registerCafeSystemCallbacks(CafeSystemCallbacks* cafeSystemCallbacks)
+	{
+		sCafeSystemCallbacks = cafeSystemCallbacks;
+	}
+	void unregisterCafeSystemCallbacks()
+	{
+		sCafeSystemCallbacks = nullptr;
+	}
+	CafeSystemCallbacks* getCafeSystemCallbacks()
+	{
+		return sCafeSystemCallbacks;
+	}
+
 	void InitVirtualMlcStorage();
 	void MlcStorageMountTitle(TitleInfo& titleInfo);
     void MlcStorageUnmountAllTitles();
@@ -507,7 +519,9 @@ namespace CafeSystem
 	{
 		std::string buffer;
 		const char* platform = NULL;
-		#if BOOST_OS_WINDOWS
+        #if __ANDROID__
+        platform = "Android";
+		#elif BOOST_OS_WINDOWS
 		uint32 buildNumber;
 		std::string windowsVersionName = GetWindowsNamedVersion(buildNumber);
 		buffer = fmt::format("{} (Build {})", windowsVersionName, buildNumber);
@@ -806,10 +820,10 @@ namespace CafeSystem
 			// check for content folder
 			fs::path contentPath = executablePath.parent_path().parent_path().append("content");
 			std::error_code ec;
-			if (fs::is_directory(contentPath, ec))
+			if (cemu::fs::is_directory(contentPath, ec))
 			{
 				// mounting content folder
-				bool r = FSCDeviceHostFS_Mount(std::string("/vol/content").c_str(), _pathToUtf8(contentPath), FSC_PRIORITY_BASE);
+				bool r = FSCDeviceHost_Mount(std::string("/vol/content").c_str(), _pathToUtf8(contentPath), FSC_PRIORITY_BASE);
 				if (!r)
 				{
 					cemuLog_log(LogType::Force, "Failed to mount {}", _pathToUtf8(contentPath));
@@ -818,7 +832,7 @@ namespace CafeSystem
 			}
 		}
 		// mount code folder to a virtual temporary path
-		FSCDeviceHostFS_Mount(std::string("/internal/code/").c_str(), _pathToUtf8(executablePath.parent_path()), FSC_PRIORITY_BASE);
+		FSCDeviceHost_Mount(std::string("/internal/code/").c_str(), _pathToUtf8(executablePath.parent_path()), FSC_PRIORITY_BASE);
 		std::string internalExecutablePath = "/internal/code/";
 		internalExecutablePath.append(_pathToUtf8(executablePath.filename()));
 		_pathToExecutable = internalExecutablePath;
@@ -855,7 +869,9 @@ namespace CafeSystem
 		PPCTimer_waitForInit();
 		// start system
 		sSystemRunning = true;
-		gui_notifyGameLoaded();
+		auto cafeSystemCallbacks = CafeSystem::getCafeSystemCallbacks();
+		if (cafeSystemCallbacks)
+			cafeSystemCallbacks->notifyGameLoaded();
 		std::thread t(_LaunchTitleThread);
 		t.detach();
 	}

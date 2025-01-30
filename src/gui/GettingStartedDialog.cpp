@@ -1,4 +1,4 @@
-#include "gui/GettingStartedDialog.h"
+#include "GettingStartedDialog.h"
 
 #include <wx/sizer.h>
 #include <wx/filepicker.h>
@@ -7,10 +7,10 @@
 #include <wx/radiobox.h>
 
 #include "config/ActiveSettings.h"
-#include "gui/CemuApp.h"
-#include "gui/DownloadGraphicPacksWindow.h"
-#include "gui/GraphicPacksWindow2.h"
-#include "gui/input/InputSettings2.h"
+#include "CemuApp.h"
+#include "DownloadGraphicPacksWindow.h"
+#include "GraphicPacksWindow2.h"
+#include "input/InputSettings2.h"
 #include "config/CemuConfig.h"
 
 #include "Cafe/TitleList/TitleList.h"

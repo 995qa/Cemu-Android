@@ -1,10 +1,9 @@
-#include "gui/guiWrapper.h"
-#include "gui/input/panels/InputPanel.h"
+#include "input/panels/InputPanel.h"
 
 #include <wx/textctrl.h>
 #include <wx/wupdlock.h>
 
-#include "gui/helpers/wxHelpers.h"
+#include "helpers/wxHelpers.h"
 
 InputPanel::InputPanel(wxWindow* parent)
 	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxNO_BORDER | wxWANTS_CHARS)
@@ -27,7 +26,7 @@ void InputPanel::on_timer(const EmulatedControllerPtr& emulated_controller, cons
 	const auto mapping = reinterpret_cast<uint64>(element->GetClientData());
 
 	// reset mapping
-	if(std::exchange(m_right_down, false) || gui_isKeyDown(PlatformKeyCodes::ESCAPE))
+	if(std::exchange(m_right_down, false))
 	{
 		element->SetBackgroundColour(kKeyColourNormalMode);
 		m_color_backup[element->GetId()] = kKeyColourNormalMode;

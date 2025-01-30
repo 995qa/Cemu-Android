@@ -6,13 +6,13 @@
 #include "Cafe/OS/libs/coreinit/coreinit.h"
 
 #include "boost/program_options.hpp"
-#include <wx/msgdlg.h>
 
 #include "config/ActiveSettings.h"
 #include "config/NetworkSettings.h"
 #include "util/crypto/aes128.h"
 
 #include "Cafe/Filesystem/FST/FST.h"
+#include "util/helpers/StringHelpers.h"
 
 void requireConsole();
 
@@ -74,7 +74,9 @@ bool LaunchSettings::HandleCommandline(const std::vector<std::wstring>& args)
 	po::options_description hidden{ "Hidden options" };
 	hidden.add_options()
 		("nsight", po::value<bool>()->implicit_value(true), "NSight debugging options")
-		("legacy", po::value<bool>()->implicit_value(true), "Intel legacy graphic mode");
+		("legacy", po::value<bool>()->implicit_value(true), "Intel legacy graphic mode")
+		("ppcrec-lower-addr", po::value<std::string>(), "For debugging: Lower address allowed for PPC recompilation")
+		("ppcrec-upper-addr", po::value<std::string>(), "For debugging: Upper address allowed for PPC recompilation");
 
 	po::options_description extractor{ "Extractor tool" };
 	extractor.add_options()
@@ -186,6 +188,21 @@ bool LaunchSettings::HandleCommandline(const std::vector<std::wstring>& args)
 		if (vm.count("output"))
 			log_path = vm["output"].as<std::wstring>();
 
+		// recompiler range limit for debugging
+		if (vm.count("ppcrec-lower-addr"))
+		{
+			uint32 addr = (uint32)StringHelpers::ToInt64(vm["ppcrec-lower-addr"].as<std::string>());
+			ppcRec_limitLowerAddr = addr;
+		}
+		if (vm.count("ppcrec-upper-addr"))
+		{
+			uint32 addr = (uint32)StringHelpers::ToInt64(vm["ppcrec-upper-addr"].as<std::string>());
+			ppcRec_limitUpperAddr = addr;
+		}
+		if(ppcRec_limitLowerAddr != 0 && ppcRec_limitUpperAddr != 0)
+			cemuLog_log(LogType::Force, "PPCRec range limited to 0x{:08x}-0x{:08x}", ppcRec_limitLowerAddr, ppcRec_limitUpperAddr);
+
+
 		if(!extract_path.empty())
 		{
 			ExtractorTool(extract_path, output_path, log_path);
@@ -199,11 +216,7 @@ bool LaunchSettings::HandleCommandline(const std::vector<std::wstring>& args)
 		std::string errorMsg;
 		errorMsg.append("Error while trying to parse command line parameter:\n");
 		errorMsg.append(ex.what());
-#if BOOST_OS_WINDOWS
-		wxMessageBox(errorMsg, "Parameter error", wxICON_ERROR);
-#else
 		std::cout << errorMsg << std::endl;
-#endif
 		return false;
 	}
 	

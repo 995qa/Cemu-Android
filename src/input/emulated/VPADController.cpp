@@ -1,11 +1,13 @@
 #include "input/emulated/VPADController.h"
 #include "input/api/Controller.h"
+#include <mutex>
+#if HAS_SDL
 #include "input/api/SDL/SDLController.h"
-#include "gui/guiWrapper.h"
+#endif // HAS_SDL
+#include "Cemu/GuiSystem/GuiSystem.h"
 #include "input/InputManager.h"
 #include "Cafe/HW/Latte/Core/Latte.h"
 #include "Cafe/CafeSystem.h"
-#include <wx/intl.h>
 
 enum ControllerVPADMapping2 : uint32
 {
@@ -236,10 +238,11 @@ void VPADController::update_touch(VPADStatus_t& status)
 
 void VPADController::update_motion(VPADStatus_t& status)
 {
-	if (has_motion())
+	auto& input_manager = InputManager::instance();
+	bool has_device_motion = input_manager.m_device_motion.m_device_motion_enabled;
+	if (has_motion() || has_device_motion)
 	{
-		auto motionSample = get_motion_data();
-
+		MotionSample motionSample = has_device_motion ? input_manager.get_device_motion_sample() : get_motion_data();
 		glm::vec3 acc;
 		motionSample.getVPADAccelerometer(&acc[0]);
 		//const auto& acc = motionSample.getVPADAccelerometer();
@@ -280,16 +283,15 @@ void VPADController::update_motion(VPADStatus_t& status)
 	}
 
 	bool pad_view;
-	auto& input_manager = InputManager::instance();
 	if (const auto right_mouse = input_manager.get_right_down_mouse_info(&pad_view))
 	{
 		const Vector2<float> mousePos(right_mouse->x, right_mouse->y);
 
 		int w, h;
 		if (pad_view)
-			gui_getPadWindowPhysSize(w, h);
+			GuiSystem::getPadWindowPhysSize(w, h);
 		else
-			gui_getWindowPhysSize(w, h);
+			GuiSystem::getWindowPhysSize(w, h);
 
 		float wx = mousePos.x / w;
 		float wy = mousePos.y / h;
@@ -367,21 +369,21 @@ std::string_view VPADController::get_button_name(ButtonId id)
 	case kButtonId_ZR: return "ZR";
 	case kButtonId_Plus: return "+";
 	case kButtonId_Minus: return "-";
-	case kButtonId_Up: return wxTRANSLATE("up");
-	case kButtonId_Down: return wxTRANSLATE("down");
-	case kButtonId_Left: return wxTRANSLATE("left");
-	case kButtonId_Right: return wxTRANSLATE("right");
-	case kButtonId_StickL: return wxTRANSLATE("click");
-	case kButtonId_StickR: return wxTRANSLATE("click");
-	case kButtonId_StickL_Up: return wxTRANSLATE("up");
-	case kButtonId_StickL_Down: return wxTRANSLATE("down");
-	case kButtonId_StickL_Left: return wxTRANSLATE("left");
-	case kButtonId_StickL_Right: return wxTRANSLATE("right");
-	case kButtonId_StickR_Up: return wxTRANSLATE("up");
-	case kButtonId_StickR_Down: return wxTRANSLATE("down");
-	case kButtonId_StickR_Left: return wxTRANSLATE("left");
-	case kButtonId_StickR_Right: return wxTRANSLATE("right");
-	case kButtonId_Home: return wxTRANSLATE("home");
+	case kButtonId_Up: return "up";
+	case kButtonId_Down: return "down";
+	case kButtonId_Left: return "left";
+	case kButtonId_Right: return "right";
+	case kButtonId_StickL: return "click";
+	case kButtonId_StickR: return "click";
+	case kButtonId_StickL_Up: return "up";
+	case kButtonId_StickL_Down: return "down";
+	case kButtonId_StickL_Left: return "left";
+	case kButtonId_StickL_Right: return "right";
+	case kButtonId_StickR_Up: return "up";
+	case kButtonId_StickR_Down: return "down";
+	case kButtonId_StickR_Left: return "left";
+	case kButtonId_StickR_Right: return "right";
+	case kButtonId_Home: return "home";
 	default:
 		cemu_assert_debug(false);
 		return "";
@@ -511,6 +513,7 @@ bool VPADController::set_default_mapping(const std::shared_ptr<ControllerBase>& 
 	std::vector<std::pair<uint64, uint64>> mapping;
 	switch (controller->api())
 	{
+#if HAS_SDL
 	case InputAPI::SDLController: {
 		const auto sdl_controller = std::static_pointer_cast<SDLController>(controller);
 		if (sdl_controller->get_guid() == SDLController::kLeftJoyCon)
@@ -634,6 +637,7 @@ bool VPADController::set_default_mapping(const std::shared_ptr<ControllerBase>& 
 		}
 		break;
 	}
+#endif // HAS_SDL
 	case InputAPI::XInput:
 	{
 		mapping =

@@ -1,5 +1,5 @@
 #pragma once
-#include "gui/components/TextList.h"
+#include "components/TextList.h"
 
 wxDECLARE_EVENT(wxEVT_DISASMCTRL_NOTIFY_GOTO_ADDRESS, wxCommandEvent); // Notify parent that goto address operation completed. Event contains the address that was jumped to.
 

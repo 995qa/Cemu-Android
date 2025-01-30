@@ -1,15 +1,15 @@
-#include "gui/TitleManager.h"
+#include "TitleManager.h"
 
-#include "gui/helpers/wxCustomEvents.h"
-#include "gui/helpers/wxCustomData.h"
+#include "helpers/wxCustomEvents.h"
+#include "helpers/wxCustomData.h"
 #include "Cafe/TitleList/GameInfo.h"
 #include "util/helpers/helpers.h"
-#include "gui/helpers/wxHelpers.h"
-#include "gui/wxHelper.h"
-#include "gui/components/wxTitleManagerList.h"
-#include "gui/components/wxDownloadManagerList.h"
-#include "gui/GameUpdateWindow.h"
-#include "gui/dialogs/SaveImport/SaveTransfer.h"
+#include "helpers/wxHelpers.h"
+#include "wxHelper.h"
+#include "components/wxTitleManagerList.h"
+#include "components/wxDownloadManagerList.h"
+#include "GameUpdateWindow.h"
+#include "dialogs/SaveImport/SaveTransfer.h"
 
 #include <wx/listbase.h>
 #include <wx/sizer.h>
@@ -33,9 +33,11 @@
 
 #include "Cafe/IOSU/legacy/iosu_crypto.h"
 #include "config/ActiveSettings.h"
-#include "gui/dialogs/SaveImport/SaveImportWindow.h"
+#include "dialogs/SaveImport/SaveImportWindow.h"
 #include "Cafe/Account/Account.h"
 #include "Cemu/Tools/DownloadManager/DownloadManager.h"
+#include "CemuApp.h"
+
 #include "gui/CemuApp.h"
 #include "Cafe/TitleList/TitleList.h"
 #include "Cafe/TitleList/SaveList.h"
